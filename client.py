@@ -3,10 +3,42 @@ import select
 import errno
 import sys
 import threading
+import time
+from random import randrange
+def BroadCast_Sender():
+    server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
+    # Enable broadcasting mode
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+
+    # Set a timeout so the socket does not block
+    # indefinitely when trying to receive data.
+    server.settimeout(0.2)
+    message = b"I'm a new user"
+
+  # while True:
+    server.sendto(message, ('<broadcast>', 37020))
+    #   print("message sent!")
+  #     time.sleep(1)
+
+def BroadCast_Listener():
+    client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)  # UDP
+    client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    # Enable broadcasting mode
+    client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+
+    client.bind(("", 37020))
+#   while True:
+        # Thanks @seym45 for a fix
+    data, addr = client.recvfrom(1024)
+#     print("received message: %s" % data)
+    return data
+
+BroadCast_Sender()
 HEADER_LENGTH = 10
-
-IP = "127.0.0.1"
+IP=BroadCast_Listener()
 PORT = 1234
 my_username = input("Username: ")
 
@@ -87,8 +119,11 @@ def receive_message():
             sys.exit()
 
 
+
 thread1 = threading.Thread(target=receive_message)
 thread2 = threading.Thread(target=send_message)
 thread1.start()
 thread2.start()
 thread1.join()
+
+
