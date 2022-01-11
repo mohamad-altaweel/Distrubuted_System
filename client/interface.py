@@ -1,11 +1,12 @@
 import re
-
+from client import Client
 
 SERVER_IP_SET = False
 SERVER_IP = ''
 SERVER_PORT_SET = False
 SERVER_PORT = ''
 PROGRAM_RUNNING = True
+USERNAME = 'root'
 
 def read_server_ip():
     val = input("Enter The IP address: ")
@@ -29,12 +30,14 @@ def read_server_port():
     else:
         print('Server port format is invalid')
 
-def read_command():
+def read_command(client):
     val = input("Enter Command: ")
     if val.startswith('create'):
         print('Create group')
     elif val.startswith('send'):
         print('Send message')
+        message = input("Type the message: ")
+        client.send_message(message)
     elif val.startswith('join'):
         print('join a group')
     elif val.startswith('exit'):
@@ -49,5 +52,7 @@ while(not(SERVER_IP_SET)):
     read_server_ip()
 while(not(SERVER_PORT_SET)):
     read_server_port()
+USERNAME = input("type your username: ")
+client = Client(10,SERVER_IP,SERVER_PORT,USERNAME)
 while(PROGRAM_RUNNING):
-    read_command()
+    read_command(client)
