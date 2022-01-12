@@ -5,9 +5,11 @@ PROGRAM_RUNNING = True
 def read_command():
     val = input("Enter Command: ")
     if val.startswith('start'):
+        ip = input('Enter ip address: ')
         port = int(input("Enter port: "))
+        broadcast_port = int(input("Enter broadcast port: "))
         print('Starting Server....')
-        server = Server(10,'127.0.0.1',port)
+        server = Server(10,ip,port, broadcast_port)
     elif val.startswith('exit'):
         global PROGRAM_RUNNING
         PROGRAM_RUNNING = False

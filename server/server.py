@@ -1,14 +1,16 @@
 import socket
 import select
 import threading
+from broadcaster import Broadcaster
 
 class Server():
 
-    def __init__(self, header_len, ip, port) -> None:
+    def __init__(self, header_len, ip, port, broadcast_port) -> None:
         self.HEADER_LENGTH = header_len
         self.IP = ip
         self.PORT = int(port)
         self.__start_server()
+        self.broadcaster = Broadcaster(broadcast_port)
 
     def __start_server(self):
         # Create a socket
@@ -82,6 +84,7 @@ class Server():
                     self.clients[client_socket] = user
                     print("\n")
                     print('Accepted new connection from {}:{}, username: {}'.format(*client_address, user['data'].decode('utf-8')))
+                    self.broadcaster.broadcast_message('192.168.10.255','{}'.format(*client_address))
 
                 # Else existing socket is sending a message
                 else:
@@ -89,7 +92,7 @@ class Server():
                     message = self.__receive_message(notified_socket)
                     # If False, client disconnected, cleanup
                     if message is False:
-                        print('Closed connection from: {}'.format(clients[notified_socket]['data'].decode('utf-8')))
+                        print('Closed connection from: {}'.format(self.clients[notified_socket]['data'].decode('utf-8')))
                         # Remove from list for socket.socket()
                         self.sockets_list.remove(notified_socket)
                         # Remove from our list of users
