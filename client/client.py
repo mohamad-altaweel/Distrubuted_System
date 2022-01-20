@@ -3,31 +3,24 @@ import select
 import errno
 import sys
 import threading
-import time
+import json
 from random import randrange
 
 class Client():
     
     def __broadcast_sender(self):
-        server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Send message on broadcast address
+        # Create a UDP socket
+        broadcast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        broadcast_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         # Enable broadcasting mode
-        server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        # Set a timeout so the socket does not block
-        # indefinitely when trying to receive data.
-        server.settimeout(0.2)
-        message = b"I'm a new user"
-        server.sendto(message, ('<broadcast>', 37020))
+        broadcast_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        # Send message on broadcast address
+        #broadcast_socket.bind((self.IP,self.PORT))
+        message = self.__create_message("connect", {"username":str(self.username),"ip":self.IP,"port":self.PORT})
+        broadcast_socket.sendto(message, ('192.168.10.255', 3795))
+        broadcast_socket.close()
     
-    def __broadcast_listener(self):
-        client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)  # UDP
-        client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        # Enable broadcasting mode
-        client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        client.bind(("127.0.0.1", 37020))
-        data, addr = client.recvfrom(1024)
-        return data
-
     def __init__(self, header_length,ip, port, username):
         self.HEADER_LENGTH = header_length
         self.IP = ip
@@ -38,19 +31,31 @@ class Client():
 
     def start_connection(self):
         self.__broadcast_sender()
-        self.client_socket.connect((self.IP, self.PORT))
+        self.initial_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.initial_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.initial_socket.bind((self.IP, self.PORT))
+        data, addr = self.initial_socket.recvfrom(4096)
+        decoded_data = json.loads(data.decode())
+
+        self.client_socket.connect((decoded_data['content']['IP'], decoded_data['content']['PORT']))
+        print("Successfully connected to", decoded_data['content']['IP'])
         # Set connection to non-blocking state, so .recv() call won;t block, just return some exception we'll handle
-        self.client_socket.setblocking(False)
-        username_header = f"{len(self.username):<{self.HEADER_LENGTH}}".encode('utf-8')
-        self.client_socket.send(username_header + self.username)
+        #self.client_socket.setblocking(False)
         self.recieve_thread = threading.Thread(target=self.receive_message, daemon = True)
         self.recieve_thread.start()
 
-    def send_message(self,message):
-        message = message.encode('utf-8')
-        message_header = f"{len(message):<{self.HEADER_LENGTH}}".encode('utf-8')
-        self.client_socket.send(message_header + message)
+    def send_message(self,command,message):
+        message = self.__create_message(command, message)
+        self.client_socket.send(message)
     
+    def __create_message(self, command, content):
+        dict_msg = {"command":command, "content":content}
+        return json.dumps(dict_msg, ensure_ascii=False).encode('utf8')
+    
+    def __handle_message(message):
+        command = message['command']
+        if command == "connected":
+            print("Successfully connected")
 
 
     def receive_message(self):
@@ -65,19 +70,11 @@ class Client():
                         print("\n")
                         print('Connection closed by the server')
                         sys.exit()
-                    # Convert header to int value
-                    username_length = int(username_header.decode('utf-8').strip())
-                    # Receive and decode username
-                    username = self.client_socket.recv(username_length).decode('utf-8')
-
                     # Now do the same for message (as we received username, we received whole message, there's no need to check if it has any length)
                     message_header = self.client_socket.recv(self.HEADER_LENGTH)
                     message_length = int(message_header.decode('utf-8').strip())
                     message = self.client_socket.recv(message_length).decode('utf-8')
-
-                    # Print message
-                    print("\n")
-                    print(f'{username} > {message}')
+                    self.__handle_message(message)
 
             except IOError as e:
                 # This is normal on non blocking connections - when there are no incoming data error is going to be raised

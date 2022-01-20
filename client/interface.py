@@ -37,7 +37,7 @@ def read_command(client):
     elif val.startswith('send'):
         print('Send message')
         message = input("Type the message: ")
-        client.send_message(message)
+        client.send_message("send",message)
     elif val.startswith('join'):
         print('join a group')
     elif val.startswith('exit'):

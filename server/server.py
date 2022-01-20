@@ -2,6 +2,8 @@ import socket
 import select
 import threading
 from broadcaster import Broadcaster
+import json
+import time
 
 class Server():
 
@@ -10,7 +12,7 @@ class Server():
         self.IP = ip
         self.PORT = int(port)
         self.__start_server()
-        self.broadcaster = Broadcaster(broadcast_port)
+        self.start_listening_broadcast(broadcast_port)
 
     def __start_server(self):
         # Create a socket
@@ -52,6 +54,21 @@ class Server():
             # socket.close() also invokes socket.shutdown(socket.SHUT_RDWR) what sends information about closing the socket (shutdown read/write)
             # and that's also a cause when we receive an empty message
             return False
+    
+    def __create_message(self, command, content):
+        dict_msg = {"command":command, "content":content}
+        return json.dumps(dict_msg, ensure_ascii=False).encode('utf8')
+    
+    def __handle_message(self,message,addr):
+        command = message['command']
+        if command == "connect":
+            print("Successfully connected")
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            time.sleep(5)
+            send_message = self.__create_message("connect", {"IP":self.IP,"PORT":self.PORT})
+            s.sendto(send_message, (message['content']['ip'],message['content']['port']))
+            s.close()
 
     def run_server(self):
         while True:
@@ -75,6 +92,7 @@ class Server():
                     client_socket, client_address = self.server_socket.accept()
                     # Client should send his name right away, receive it
                     user = self.__receive_message(client_socket)
+                    print(user)
                     # If False - client disconnected before he sent his name
                     if user is False:
                         continue
@@ -84,7 +102,6 @@ class Server():
                     self.clients[client_socket] = user
                     print("\n")
                     print('Accepted new connection from {}:{}, username: {}'.format(*client_address, user['data'].decode('utf-8')))
-                    self.broadcaster.broadcast_message('192.168.10.255','{}'.format(*client_address))
 
                 # Else existing socket is sending a message
                 else:
@@ -116,3 +133,38 @@ class Server():
                 self.sockets_list.remove(notified_socket)
                 # Remove from our list of users
                 del self.clients[notified_socket]
+
+    def start_listening_broadcast(self, BROADCAST_PORT) -> None:
+        self.MY_HOST = socket.gethostname()
+        self.MY_IP_BROADCAST = socket.gethostbyname(self.MY_HOST)
+        self.BROADCAST_PORT = BROADCAST_PORT
+        # Create a UDP socket
+        self.bd_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # Set the socket to broadcast and enable reusing addresses
+        self.bd_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        self.bd_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Bind socket to address and port
+        self.bd_socket.bind(('', self.BROADCAST_PORT))
+        print("Listening to broadcast messages")
+        self.recieve_thread = threading.Thread(target=self.__start_receiving_broadcast, daemon = True)
+        self.recieve_thread.start()
+    
+    def __start_receiving_broadcast(self):
+        while True:
+            data, addr = self.bd_socket.recvfrom(2048)
+            decoded_data = json.loads(data.decode())
+            print(decoded_data)
+            if data:
+                print("Received broadcast message:", decoded_data["command"], addr)
+                self.__handle_message(decoded_data,addr)
+    
+    def broadcast_message(self,ip, broadcast_message):
+        # Send message on broadcast address
+        # Create a UDP socket
+        broadcast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        broadcast_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Enable broadcasting mode
+        broadcast_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        # Send message on broadcast address
+        broadcast_socket.sendto(str.encode(broadcast_message), (ip, self.BROADCAST_PORT))
+        broadcast_socket.close()

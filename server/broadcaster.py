@@ -1,6 +1,6 @@
 import socket
 import threading
-
+import json 
 
 class Broadcaster():
 
@@ -21,9 +21,17 @@ class Broadcaster():
     
     def __start_receiving(self):
         while True:
-            data, addr = self.socket.recvfrom(1024)
+            data, addr = self.socket.recvfrom(2048)
+            decoded_data = json.loads(data.decode())
+            print(decoded_data)
             if data:
-                print("Received broadcast message:", data.decode())
+                print("Received broadcast message:", decoded_data["command"], addr)
+                self.__handle_message(decoded_data)
+    
+    def __handle_message(self,message):
+        command = message['command']
+        if command == "connect":
+            print("Successfully connected")
 
 
     def broadcast_message(self,ip, broadcast_message):
