@@ -55,6 +55,8 @@ def read_command(client):
         message = input("Enter group name: ")
         client.send_message("join", message)
     elif val.startswith('exit'):
+        message = {"message":"exit","username": str(client.username), "groupname": str(client.groupname)}
+        client.send_message("exit", message)
         global PROGRAM_RUNNING
         PROGRAM_RUNNING = False
         print('Bye bye...')

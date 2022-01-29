@@ -64,7 +64,8 @@ class Client():
             # Print message
             print("\n")
             print(username['content']['username'] + ' : ' + message['content']['message'] )
-
+        elif command == "exit":
+            print(username['content']['username'] + " has lift the chat room")
     def receive_message(self):
         while True:
             try:

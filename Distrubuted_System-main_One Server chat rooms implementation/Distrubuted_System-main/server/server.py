@@ -75,11 +75,11 @@ class Server():
                print("This group name does not exist we are creating you a new group with name: " + room_name)
                new_chat_room= self.create_chat_room(room_name,self.IP,self.PORT,self.server_socket)
                self.update_chat_rooms_list(new_chat_room)
-               new_chat_room.update_client_List(client_ip,client_port,client_name)
+               new_chat_room.add_client_List(client_ip,client_port,client_name)
                assigned_server= {'ip': new_chat_room.server_ip, 'port': new_chat_room.server_port}
 
             else:
-               existing_chat_room.update_client_List(client_ip, client_port, client_name)
+               existing_chat_room.add_client_List(client_ip, client_port, client_name)
                assigned_server = {'ip': existing_chat_room.server_ip, 'port': existing_chat_room.server_port}
 
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -91,7 +91,6 @@ class Server():
             print("Successfully connected")
 
 
-
         elif command == "create":
             room_name=message['content']
             print("Creating new chat room: " + room_name)
@@ -101,6 +100,9 @@ class Server():
         elif command == "join":
             room_name=message['content']
             print("Joining an existing chat room: " + room_name)
+
+
+
     def run_server(self):
         while True:
             # Calls Unix select() system call or Windows select() WinSock call with three parameters:
@@ -133,7 +135,7 @@ class Server():
                     self.sockets_list.append(client_socket)
                     # Also save username and username header
                     self.clients[client_socket] = user
-                    chat_room.update_socket_List(client_socket, user)
+                    chat_room.add_socket_List(client_socket, user)
                     print("\n")
 
                     print('Accepted new connection from {}:{}, username: {}'.format(*client_address, jason_data['content']['username']))
@@ -171,6 +173,14 @@ class Server():
                              # We are reusing here message header sent by sender, and saved username header send by user when he connected
 
                              client_socket.send(user['header'] + user['data'] + message['header'] + message['data'])
+                    elif jason_message_data['command'] == "exit":
+                        for client_socket in chat_room.clients:
+                            #    print(client_socket)
+                            # But don't sent it to sender
+                            if client_socket != notified_socket:
+                                # Send user and message (both with their headers)
+                                # We are reusing here message header sent by sender, and saved username header send by user when he connected
+                                client_socket.send(user['header'] + user['data'] + message['header'] + message['data'])
                     else:
                         self.__handle_message(jason_message_data,jason_user_data)
             # It's not really necessary to have this, but will handle some socket exceptions just in case
