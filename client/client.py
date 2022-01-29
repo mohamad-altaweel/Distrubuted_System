@@ -16,10 +16,10 @@ class Client():
         # Enable broadcasting mode
         broadcast_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         # Send message on broadcast address
-        #broadcast_socket.bind((self.IP,self.PORT))
         message = self.__create_message("connect", {"username":str(self.username),"ip":self.IP,"port":self.PORT})
         broadcast_socket.sendto(message, ('192.168.10.255', 3795))
         broadcast_socket.close()
+
     
     def __init__(self, header_length,ip, port, username):
         self.HEADER_LENGTH = header_length
@@ -28,21 +28,31 @@ class Client():
         self.username =  username.encode('utf-8')
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.start_connection()
+        self.connected = False
 
     def start_connection(self):
-        self.__broadcast_sender()
-        self.initial_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.initial_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.initial_socket.bind((self.IP, self.PORT))
-        data, addr = self.initial_socket.recvfrom(4096)
-        decoded_data = json.loads(data.decode())
-
-        self.client_socket.connect((decoded_data['content']['IP'], decoded_data['content']['PORT']))
-        print("Successfully connected to", decoded_data['content']['IP'])
-        # Set connection to non-blocking state, so .recv() call won;t block, just return some exception we'll handle
-        #self.client_socket.setblocking(False)
-        self.recieve_thread = threading.Thread(target=self.receive_message, daemon = True)
-        self.recieve_thread.start()
+        count = 0
+        while not self.connected and count < 2:
+            try:
+                self.__broadcast_sender()
+                self.initial_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                self.initial_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                self.initial_socket.bind((self.IP, self.PORT))
+                data, addr = self.initial_socket.recvfrom(4096)
+                decoded_data = json.loads(data.decode())
+                self.connected = True
+            except socket.error as msg:
+                print("Failed to broadcast a new connection")
+                print("Socket Error: {}".format(msg))
+                print("Trying to reconnect...")
+                count = count + 1
+        if self.connected:
+            self.client_socket.connect((decoded_data['content']['IP'], decoded_data['content']['PORT']))
+            print("Successfully connected to", decoded_data['content']['IP'])
+            self.recieve_thread = threading.Thread(target=self.receive_message, daemon = True)
+            self.recieve_thread.start()
+        else:
+            print("Please try again")
 
     def send_message(self,command,message):
         message = self.__create_message(command, message)
