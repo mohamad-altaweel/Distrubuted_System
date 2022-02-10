@@ -1,9 +1,11 @@
 from server import Server
 
 PROGRAM_RUNNING = True
+server = None
 
 def read_command():
     val = input("Enter Command: ")
+    global server
     if val.startswith('start'):
         ip = input('Enter ip address: ')
         port = int(input("Enter port: "))
@@ -14,9 +16,14 @@ def read_command():
         global PROGRAM_RUNNING
         PROGRAM_RUNNING = False
         print('Bye bye...')
+    elif val.startswith('elect'):
+        server.trigger_election()
     else:
         print('Invalid command')
 
 print("Welcome to TikTok Chat Server")
-while(PROGRAM_RUNNING):
-    read_command()
+try:
+    while(PROGRAM_RUNNING):
+        read_command()
+except KeyboardInterrupt:
+    server.shutdown()

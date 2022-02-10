@@ -1,4 +1,6 @@
 import re
+import time
+
 from client import Client
 
 SERVER_IP_SET = False
@@ -7,7 +9,8 @@ SERVER_PORT_SET = False
 SERVER_PORT = ''
 PROGRAM_RUNNING = True
 USERNAME = 'root'
-
+GROUPNAME = 'group'
+send_for_first_time=True
 def read_server_ip():
     val = input("Enter The IP address: ")
     found = re.search(r'^\d+\.\d+\.\d+\.\d+$', val)
@@ -34,13 +37,20 @@ def read_command(client):
     val = input("Enter Command: ")
     if val.startswith('create'):
         print('Create group')
+        message = input("Enter group name: ")
+        client.send_message("create", message)
     elif val.startswith('send'):
         print('Send message')
-        message = input("Type the message: ")
+        inp_message = input("Type the message: ")
+        message={"message":inp_message, "groupname":str(client.groupname)}
         client.send_message("send",message)
     elif val.startswith('join'):
         print('join a group')
+        message = input("Enter group name: ")
+        client.send_message("join", message)
     elif val.startswith('exit'):
+        message = {"message":"exit","username": str(client.username), "groupname": str(client.groupname)}
+        client.send_message("exit", message)
         global PROGRAM_RUNNING
         PROGRAM_RUNNING = False
         print('Bye bye...')
@@ -52,7 +62,8 @@ while(not(SERVER_IP_SET)):
     read_server_ip()
 while(not(SERVER_PORT_SET)):
     read_server_port()
-USERNAME = input("type your username: ")
-client = Client(10,SERVER_IP,SERVER_PORT,USERNAME)
+USERNAME = input("Type your username: ")
+GROUPNAME = input("Type your group name: ")
+client = Client(10,SERVER_IP,SERVER_PORT,USERNAME,GROUPNAME)
 while(PROGRAM_RUNNING):
     read_command(client)
