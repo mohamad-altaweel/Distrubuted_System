@@ -395,7 +395,7 @@ class Server():
             return None
     
     def __parse_keys_to_tuple(self, dictionary):
-        for key in dictionary:
+        for key in list(dictionary.keys()):
             val = dictionary[key]
             del dictionary[key]
             dictionary[make_tuple(str(key))] = val
