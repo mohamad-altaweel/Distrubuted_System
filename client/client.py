@@ -55,7 +55,7 @@ class Client():
         if self.connected:
                 self.client_socket.connect((decoded_data['content']['IP'], int(decoded_data['content']['PORT'])))
                 print("Successfully connected to", decoded_data['content']['IP'])
-                time.sleep(0.5)
+                time.sleep(3)
                 self.send_message("connect", {"username":str(self.username),"ip":self.IP,"port":self.PORT, "groupname":str(self.groupname)})
                 self.send_message("connect", {"username":str(self.username),"ip":self.IP,"port":self.PORT, "groupname":str(self.groupname)})
                 self.recieve_thread = threading.Thread(target=self.receive_message, daemon = True)
