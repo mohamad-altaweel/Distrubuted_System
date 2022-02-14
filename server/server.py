@@ -303,9 +303,11 @@ class Server():
         members_to_send = self.__get_server_member()
         print(members)
         mid = self.IP
+        self.participant = True
         if withoutSelf:
             mid = "0"
             members_to_send.remove(self.IP)
+            self.participant = False
         msg_leader = self.__create_message("start-election",members_to_send)
         self.broadcast_message("192.168.10.255",msg_leader)
         election_message = {"mid":mid, "isLeader":False}
@@ -313,7 +315,7 @@ class Server():
         ring = self.form_ring(members)
         neighbour = self.get_neighbour(ring, self.IP, 'left')
         time.sleep(2)
-        self.participant = True
+        print("I will send to {}".format(neighbour))
         ring_trigger_socket.sendto(json.dumps(election_message).encode(), (neighbour,10001))
         ring_trigger_socket.close()
 
@@ -333,9 +335,11 @@ class Server():
         ring_socket.bind((self.IP, 10001))
         ring = self.form_ring(members)
         neighbour = self.get_neighbour(ring, self.IP, 'left')
+        print(neighbour)
         print('Participant is up and running at {}:{}'.format(self.IP, 10001))
         while True:
             data, address = ring_socket.recvfrom(buffer_size)
+            print(" I received sth")
             election_message = json.loads(data.decode())
             if election_message['isLeader']:
                 if self.leader and not election_message['mid'] == self.IP:
@@ -348,7 +352,7 @@ class Server():
                 print("Closing election thread")
                 ring_socket.close()
                 break
-            elif election_message['mid'] < self.IP and not self.participant:
+            if election_message['mid'] < self.IP and not self.participant:
                 new_election_message = {
                     "mid": self.IP,
                     "isLeader": False
@@ -356,7 +360,7 @@ class Server():
                 self.participant = True
                 # send received election message to left neighbour
                 ring_socket.sendto(json.dumps(new_election_message).encode(), (neighbour, 10001))
-            elif election_message['mid'] > self.IP and not self.participant:
+            elif election_message['mid'] > self.IP :
                 # send received election message to left neighbour
                 self.participant = True
                 ring_socket.sendto(json.dumps(election_message).encode(), (neighbour, 10001))

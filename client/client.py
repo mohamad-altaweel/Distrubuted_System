@@ -20,7 +20,7 @@ class Client():
         #broadcast_socket.bind((self.IP,self.PORT))
         broadcast_socket.settimeout(0.2)
         message = self.__create_message("connect-init", {"username":str(self.username),"ip":self.IP,"port":self.PORT, "groupname":str(self.groupname)})
-        broadcast_socket.sendto(message, ('<broadcast>', 3795))
+        broadcast_socket.sendto(message, ('192.168.10.255', 3795))
         print("Broadcast message sent!")
         broadcast_socket.close()
 
